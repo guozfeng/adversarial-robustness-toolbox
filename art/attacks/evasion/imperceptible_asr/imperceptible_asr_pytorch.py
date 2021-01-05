@@ -30,6 +30,7 @@ from typing import Tuple, Optional, TYPE_CHECKING
 
 import numpy as np
 import scipy
+from tqdm import tqdm
 
 from art.attacks.attack import EvasionAttack
 from art.estimators.estimator import BaseEstimator, LossGradientsMixin, NeuralNetworkMixin
@@ -352,7 +353,7 @@ class ImperceptibleASRPyTorch(EvasionAttack):
         successful_adv_input = [None] * local_batch_size
         trans = [None] * local_batch_size
 
-        for iter_1st_stage_idx in range(self.max_iter_1st_stage):
+        for iter_1st_stage_idx in tqdm(range(self.max_iter_1st_stage), desc="stage 1"):
             # Zero the parameter gradients
             self.optimizer_1st_stage.zero_grad()
 
@@ -457,6 +458,14 @@ class ImperceptibleASRPyTorch(EvasionAttack):
         # Compute real input sizes
         input_sizes = input_rates.mul_(inputs.size()[-1]).int()
 
+        # turn BatchNorm layers into evaluation mode
+        def set_bn_eval(m):
+            classname = m.__class__.__name__
+            if classname.find('BatchNorm') != -1:
+                m.eval()
+
+        self.estimator.model.apply(set_bn_eval)
+        
         # Call to DeepSpeech model for prediction
         outputs, output_sizes = self.estimator.model(
             inputs.to(self.estimator.device), input_sizes.to(self.estimator.device)
@@ -520,7 +529,7 @@ class ImperceptibleASRPyTorch(EvasionAttack):
         best_loss_2nd_stage = [np.inf] * local_batch_size
         trans = [None] * local_batch_size
 
-        for iter_2nd_stage_idx in range(self.max_iter_2nd_stage):
+        for iter_2nd_stage_idx in tqdm(range(self.max_iter_2nd_stage), desc="stage 2"):
             # Zero the parameter gradients
             self.optimizer_2nd_stage.zero_grad()
 
