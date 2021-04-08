@@ -290,6 +290,15 @@ class PyTorchDeepSpeech(SpeechRecognizerMixin, PyTorchEstimator):
 
         # Put the model in the eval mode
         self._model.eval()
+        import torch.nn as nn
+        def set_bn_eval(m):
+            classname = m.__class__.__name__
+            if classname.find('BatchNorm') != -1:
+                m.eval()
+                m.track_running_stats = False
+
+        self._model.apply(set_bn_eval)
+        
 
         # Apply preprocessing
         x_preprocessed, _ = self._apply_preprocessing(x_, y=None, fit=False)
